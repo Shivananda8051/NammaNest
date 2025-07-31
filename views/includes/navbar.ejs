@@ -1,0 +1,149 @@
+<style>
+  .search-btn {
+    background-color: #fe424d;
+    color: #fff;
+    border-radius: 25px;
+    padding: 0 1rem 0 1rem;
+  }
+
+  .search-btn:hover {
+    background-color: #fe424d;
+    color: #fff;
+  }
+
+  .search-btn i {
+    color: #fff;
+    display: inline;
+    margin-right: 0.5rem;
+  }
+
+  .search-input {
+    border-radius: 25px;
+    padding: 0.5rem 3rem 0.5rem 3rem;
+    font-size: 0.98rem;
+  }
+
+  /* ✅ NEW: Blur background when mobile nav is open */
+  #blur-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    backdrop-filter: blur(5px);
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 998;
+    display: none;
+  }
+
+  #blur-overlay.active {
+    display: block;
+  }
+
+  /* ✅ OPTIONAL: Clean dropdown look */
+  @media (max-width: 768px) {
+    .navbar-collapse.show {
+      background: white;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      width: 100%;
+      z-index: 999;
+      padding: 1rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-nav {
+      flex-direction: column;
+    }
+
+    form.d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+  }
+</style>
+
+<!-- ✅ Blur overlay element -->
+<div id="blur-overlay"></div>
+
+<!-- ✅ Your original navbar, untouched -->
+<nav class="navbar navbar-expand-md bg-body-light border-bottom sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/listings">
+      <i class="fa-solid fa-hotel"></i>
+    </a>
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNavAltMarkup"
+      aria-controls="navbarNavAltMarkup"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+      id="navToggler"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav">
+        <a class="nav-link active" href="/listings">Explore</a>
+      </div>
+
+      <form
+        class="d-flex mx-auto"
+        role="search"
+        action="/listings/search"
+        method="GET"
+        style="max-width: 400px"
+      >
+        <input
+          class="form-control me-2 search-input"
+          name="q"
+          type="search"
+          placeholder="Search destinations"
+          aria-label="Search"
+        />
+        <button class="btn search-btn" type="submit">
+          <i class="fa-solid fa-magnifying-glass fa-beat-fade fa-sm"></i>Search
+        </button>
+      </form>
+
+      <div class="navbar-nav ms-auto">
+        <a href="/listings/new" class="nav-link">Become a host</a>
+        <% if (!currUser) { %>
+        <a href="/signup" class="nav-link"><b>Signup</b></a>
+        <a href="/login" class="nav-link"><b>Login</b></a>
+        <% } else { %>
+        <a href="/logout" class="nav-link"><b>Logout</b></a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ✅ Script to toggle blur -->
+<script>
+  const toggler = document.getElementById("navToggler");
+  const collapse = document.getElementById("navbarNavAltMarkup");
+  const overlay = document.getElementById("blur-overlay");
+
+  toggler.addEventListener("click", () => {
+    setTimeout(() => {
+      collapse.classList.contains("show")
+        ? overlay.classList.add("active")
+        : overlay.classList.remove("active");
+    }, 200);
+  });
+
+  overlay.addEventListener("click", () => {
+    const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+    if (bsCollapse) {
+      bsCollapse.hide();
+      overlay.classList.remove("active");
+    }
+  });
+</script>
