@@ -25,9 +25,9 @@ app.use(methodOverride("_method"));
 app.engine('ejs',ejsMate);
 app.use(express.static(path.join(__dirname, './public')));
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Server is listening to port ${PORT}`);
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+  console.log(`Server is listening to port ${port}`);
 });
 
 const dbUrl = process.env.ATLASDB_URL;
