@@ -49,8 +49,4 @@ router.get(
   isOwner,
   wrapAsync(listingController.renderEdit)
 );
-
-
-
-
 module.exports = router; 
