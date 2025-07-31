@@ -25,9 +25,11 @@ app.use(methodOverride("_method"));
 app.engine('ejs',ejsMate);
 app.use(express.static(path.join(__dirname, './public')));
 
-app.listen(8080, () => {
-  console.log("Server is listening to port 8080");
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server is listening to port ${PORT}`);
 });
+
 const dbUrl = process.env.ATLASDB_URL;
 
 main()
@@ -59,7 +61,7 @@ const sessionOption = {
   resave : false,
   saveUninitialized : true,
   cookie : {
-    expries : Date.now() + 7*24*60*60*1000,
+    expires : Date.now() + 7*24*60*60*1000,
     maxAge : 7*24*60*60*1000,
     httpOnly : true
   }
