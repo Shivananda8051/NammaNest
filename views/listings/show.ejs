@@ -15,6 +15,7 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 
 <style>
   :root {
@@ -122,6 +123,32 @@
     background: #ffeef2;
   }
   
+  .modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background-color: #f00;
+    opacity: 0;
+    z-index: 9999;
+    animation: confetti-fall 5s ease-in-out forwards;
+  }
+  
+  @keyframes confetti-fall {
+    0% {
+      transform: translateY(-100vh) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(360deg);
+      opacity: 0;
+    }
+  }
+  
   @media (max-width: 768px) {
     .booking-card {
       margin-top: 24px;
@@ -142,7 +169,6 @@
   <div class="listing-header mt-4">
     <h1 class="fw-bold"><%= listing.title %></h1>
     <div class="d-flex align-items-center gap-3 mt-2">
-      
       <span><i class="bi bi-geo-alt"></i> <%= listing.location %>, <%= listing.country %></span>
     </div>
   </div>
@@ -159,13 +185,12 @@
             <div>
               <h2 class="fw-bold">Entire <%= listing.type || 'place' %> hosted by <%= listing.owner.username %></h2>
               <p class="text-muted">
-                <i class="bi bi-people"></i> <%= listing.guests || 2 %> guests · 
+                <i class="bi bi-people"></i> <span id="display-guests"><%= listing.guests || 2 %></span> guests · 
                 <i class="bi bi-door-open"></i> <%= listing.bedrooms || 1 %> bedrooms · 
-                <i class="bi bi-bed"></i> <%= listing.beds || 1 %> beds · 
+                <i class="bi bi-bed"></i> <span id="display-beds"><%= listing.beds || 1 %></span> beds · 
                 <i class="bi bi-bucket"></i> <%= listing.bathrooms || 1 %> baths
               </p>
             </div>
-            
           </div>
 
           <div class="py-4 border-bottom">
@@ -279,10 +304,9 @@
       <div class="booking-card">
         <div class="d-flex justify-content-between align-items-end mb-3">
           <div>
-            <span class="price-display">₹<%= listing.price.toLocaleString("en-IN") %></span>
+            <span class="price-display">₹<span id="dynamic-price"><%= listing.price.toLocaleString("en-IN") %></span></span>
             <span class="per-night text-muted">/ night</span>
           </div>
-
         </div>
 
         <div class="mb-4">
@@ -298,13 +322,13 @@
           </div>
           <label class="form-label fw-bold">GUESTS</label>
           <select class="form-select mb-4" id="guests-select">
-            <option value="1">1 guest</option>
-            <option value="2">2 guest</option>
-            <option value="3">3 guest</option>
+            <% for(let i = 1; i <= 10; i++) { %>
+              <option value="<%= i %>" <%= i === 1 ? 'selected' : '' %>><%= i %> guest<%= i > 1 ? 's' : '' %></option>
+            <% } %>
           </select>
         </div>
 
-        <button class="booking-btn mb-3">
+        <button class="booking-btn mb-3" id="reserve-btn" data-bs-toggle="modal" data-bs-target="#bookingModal">
           <i class="bi bi-calendar-check"></i> Reserve
         </button>
 
@@ -312,7 +336,7 @@
 
         <div class="mt-4">
           <div class="d-flex justify-content-between mb-2">
-            <span class="text-muted">₹<%= listing.price.toLocaleString("en-IN") %> x <span id="nights-count">1</span> nights</span>
+            <span class="text-muted">₹<span id="price-per-night"><%= listing.price.toLocaleString("en-IN") %></span> x <span id="nights-count">1</span> nights</span>
             <span id="base-price">₹<%= listing.price.toLocaleString("en-IN") %></span>
           </div>
           <div class="d-flex justify-content-between mb-2">
@@ -344,17 +368,16 @@
             </p>
           <% } %>
         </div>
-       
       </div>
       
       <% if(currUser && listing.owner._id.equals(currUser._id)) { %>
         <div class="d-flex gap-3 mt-4">
           <a href="/listings/<%= listing._id %>/edit" class="btn btn-dark px-4 py-2">
-            <i class="bi bi-pencil-square me-2 "></i> Edit Listing
+            <i class="bi bi-pencil-square me-2"></i> Edit Listing
           </a>
-          <form action="/listings/<%= listing._id %>?_method=DELETE" method="POST" >
+          <form action="/listings/<%= listing._id %>?_method=DELETE" method="POST">
             <button type="button" class="btn btn-outline-dark px-4 py-2 confirm-delete">
-              <i class="bi bi-trash3 me-2 "></i> Delete Listing
+              <i class="bi bi-trash3 me-2"></i> Delete Listing
             </button>
           </form>
         </div>
@@ -363,7 +386,132 @@
   </div>
 </div>
 
+<!-- Booking Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="bookingModalLabel">Complete Your Booking</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="bookingForm">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="firstName" class="form-label fw-bold">First Name</label>
+              <input type="text" class="form-control" id="firstName" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="lastName" class="form-label fw-bold">Last Name</label>
+              <input type="text" class="form-control" id="lastName" required>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="mobile" class="form-label fw-bold">Mobile Number</label>
+              <input type="tel" class="form-control" id="mobile" pattern="[0-9]{10}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="age" class="form-label fw-bold">Age</label>
+              <input type="number" class="form-control" id="age" min="18" required>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="aadhar" class="form-label fw-bold">Aadhar Number</label>
+            <input type="text" class="form-control" id="aadhar" pattern="[0-9]{12}" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Vehicle Type</label>
+            <select class="form-select" id="vehicleType">
+              <option value="none">No Vehicle</option>
+              <option value="car">Car</option>
+              <option value="bike">Bike</option>
+              <option value="scooter">Scooter</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Preferred Floor</label>
+            <select class="form-select" id="preferredFloor">
+              <option value="ground">Ground Floor</option>
+              <option value="first">First Floor</option>
+              <option value="second">Second Floor</option>
+              <option value="top">Top Floor</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Payment Method</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" value="credit" checked>
+              <label class="form-check-label" for="creditCard">
+                Credit Card
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="paymentMethod" id="debitCard" value="debit">
+              <label class="form-check-label" for="debitCard">
+                Debit Card
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="paymentMethod" id="upi" value="upi">
+              <label class="form-check-label" for="upi">
+                UPI
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="paymentMethod" id="netBanking" value="netbanking">
+              <label class="form-check-label" for="netBanking">
+                Net Banking
+              </label>
+            </div>
+          </div>
+          
+          <div class="alert alert-info">
+            <h6 class="fw-bold">Booking Summary</h6>
+            <p id="bookingSummary"></p>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="confirmBooking">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold" id="successModalLabel">Booking Confirmed!</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+        <h4 class="my-3 fw-bold">Your booking is confirmed!</h4>
+        <p id="confirmationDetails"></p>
+        <div class="d-flex justify-content-center gap-3 mt-4">
+          <button class="btn btn-success" id="downloadTicket">
+            <i class="bi bi-download me-2"></i> Download Ticket
+          </button>
+          <button class="btn btn-outline-success" data-bs-dismiss="modal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="/js/map.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -381,7 +529,7 @@
              checkoutPicker.selectedDates[0] <= selectedDates[0]) {
             checkoutPicker.clear();
           }
-          calculateTotal();
+          updateBookingDetails();
         }
       }
     });
@@ -389,14 +537,29 @@
     const checkoutPicker = flatpickr("#checkout", {
       minDate: new Date(today.getTime() + 86400000),
       dateFormat: "M j, Y",
-      onChange: calculateTotal
+      onChange: updateBookingDetails
     });
 
     const guestsSelect = document.getElementById('guests-select');
-    guestsSelect.addEventListener('change', calculateTotal);
+    guestsSelect.addEventListener('change', updateBookingDetails);
 
-    function calculateTotal() {
-      const pricePerNight = <%= listing.price %>;
+    // Dynamic pricing based on guests
+    function updateBookingDetails() {
+      const basePricePerNight = <%= listing.price %>;
+      const guests = parseInt(guestsSelect.value);
+      
+      // Adjust price based on number of guests (10% increase per additional guest)
+      const pricePerNight = Math.round(basePricePerNight * (1 + (guests - 1) * 0.1));
+      
+      // Adjust beds based on guests (1 bed per 2 guests)
+      const beds = Math.ceil(guests / 2);
+      
+      // Update displays
+      document.getElementById('dynamic-price').textContent = pricePerNight.toLocaleString('en-IN');
+      document.getElementById('price-per-night').textContent = pricePerNight.toLocaleString('en-IN');
+      document.getElementById('display-guests').textContent = guests;
+      document.getElementById('display-beds').textContent = beds;
+      
       const cleaningFee = 500;
       const serviceFee = 800;
       let nights = 1;
@@ -412,8 +575,152 @@
       
       const total = basePrice + cleaningFee + serviceFee;
       document.getElementById('total-price').textContent = '₹' + total.toLocaleString('en-IN');
+      
+      // Update booking summary in modal
+      if(document.getElementById('bookingSummary')) {
+        const checkinDate = checkinPicker.selectedDates.length > 0 ? 
+          checkinPicker.selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not selected';
+        const checkoutDate = checkoutPicker.selectedDates.length > 0 ? 
+          checkoutPicker.selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not selected';
+        
+        document.getElementById('bookingSummary').innerHTML = `
+          <strong>Dates:</strong> ${checkinDate} to ${checkoutDate}<br>
+          <strong>Guests:</strong> ${guests}<br>
+          <strong>Total Price:</strong> ₹${total.toLocaleString('en-IN')}
+        `;
+      }
     }
 
+    // Booking modal handling
+    const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    
+    document.getElementById('reserve-btn').addEventListener('click', function() {
+      if(checkinPicker.selectedDates.length === 0 || checkoutPicker.selectedDates.length === 0) {
+        alert('Please select check-in and check-out dates first');
+        return;
+      }
+      updateBookingDetails();
+    });
+    
+    document.getElementById('confirmBooking').addEventListener('click', function() {
+      // Validate form
+      const form = document.getElementById('bookingForm');
+      if(!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+      }
+      
+      // Generate random room number (100-999)
+      const roomNumber = Math.floor(Math.random() * 900) + 100;
+      
+      // Prepare confirmation details
+      const checkinDate = checkinPicker.selectedDates[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const checkoutDate = checkoutPicker.selectedDates[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const guests = guestsSelect.value;
+      const totalPrice = document.getElementById('total-price').textContent;
+      
+      document.getElementById('confirmationDetails').innerHTML = `
+        <p><strong>Room Number:</strong> ${roomNumber}</p>
+        <p><strong>Check-in:</strong> ${checkinDate}</p>
+        <p><strong>Check-out:</strong> ${checkoutDate}</p>
+        <p><strong>Guests:</strong> ${guests}</p>
+        <p><strong>Total:</strong> ${totalPrice}</p>
+      `;
+      
+      // Close booking modal and show success
+      bookingModal.hide();
+      successModal.show();
+      
+      // Create celebration effect
+      createConfetti();
+      
+      // Change reserve button to "Reserved"
+      const reserveBtn = document.getElementById('reserve-btn');
+      reserveBtn.textContent = ' Reserved';
+      reserveBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Reserved';
+      reserveBtn.classList.remove('booking-btn');
+      reserveBtn.classList.add('btn-success');
+      reserveBtn.disabled = true;
+    });
+    
+    // Download ticket functionality
+    document.getElementById('downloadTicket').addEventListener('click', function() {
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #FF385C;">Booking Confirmation</h2>
+            <img src="<%= listing.image.url %>" style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">${document.getElementById('firstName').value} ${document.getElementById('lastName').value}</h3>
+            <p><strong>Mobile:</strong> ${document.getElementById('mobile').value}</p>
+            <p><strong>Aadhar:</strong> ${document.getElementById('aadhar').value}</p>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+              <h4 style="color: #333; margin-bottom: 5px;">Check-in</h4>
+              <p>${checkinPicker.selectedDates[0].toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+            <div>
+              <h4 style="color: #333; margin-bottom: 5px;">Check-out</h4>
+              <p>${checkoutPicker.selectedDates[0].toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+            <div>
+              <h4 style="color: #333; margin-bottom: 5px;">Room No.</h4>
+              <p>${Math.floor(Math.random() * 900) + 100}</p>
+            </div>
+          </div>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px;">
+            <h4 style="color: #333; margin-bottom: 10px;">Booking Details</h4>
+            <p><strong>Property:</strong> <%= listing.title %></p>
+            <p><strong>Location:</strong> <%= listing.location %>, <%= listing.country %></p>
+            <p><strong>Guests:</strong> ${guestsSelect.value}</p>
+            <p><strong>Total Price:</strong> ${document.getElementById('total-price').textContent}</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px; color: #777; font-size: 12px;">
+            <p>Thank you for your booking! Please present this confirmation at check-in.</p>
+          </div>
+        </div>
+      `;
+      
+      const opt = {
+        margin: 10,
+        filename: 'booking_confirmation.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf().from(element).set(opt).save();
+    });
+    
+    // Confetti effect
+    function createConfetti() {
+      const colors = ['#FF385C', '#00A699', '#FC642D', '#484848', '#767676'];
+      
+      for(let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        confetti.style.animationDelay = (Math.random() * 2) + 's';
+        document.body.appendChild(confetti);
+        
+        // Remove confetti after animation
+        setTimeout(() => {
+          confetti.remove();
+        }, 5000);
+      }
+    }
+    
+    // Delete confirmation
     const deleteBtn = document.querySelector('.confirm-delete');
     if(deleteBtn) {
       deleteBtn.addEventListener('click', function(e) {
@@ -422,5 +729,8 @@
         }
       });
     }
+    
+    // Initialize booking details
+    updateBookingDetails();
   });
 </script>
